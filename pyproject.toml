@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+version = "0.0.1"
+name = "sparql-analysis"
+description = "A project to analyze SPARQL queries"
+readme = "README.md"
+requires-python = ">=3.7"
+keywords = ["SPARQL","QUERY LOGS"]
+license = {file = "LICENSE.txt"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "datetime",
+    "asyncio",
+    "tdqm",
+    "requests",
+    "regex",
+    "pandas",
+    "rdflib",
+    "argparse",
+    "swifter",
+    "rdflib"
+]
+
+[tool.ruff]
+line-length = 100
+
+
+[project.optional-dependencies]
+test = [
+    "pre-commit",
+]
+
+[tool.hatch.envs.default]
+features = [
+    "test",
+]
+post-install-commands = [
+    "pre-commit install",
+]
+
+[tool.hatch.envs.default.scripts]
+fmt = [
+    "pre-commit run --all --all-files",
+]
