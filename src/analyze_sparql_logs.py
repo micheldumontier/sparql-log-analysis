@@ -3,17 +3,19 @@ import asyncio
 import os
 import re
 import shutil
-import sys
 import time
+from dotenv import load_dotenv
 
 import pandas as pd
 import requests
 from rdflib.plugins.sparql.algebra import (
     translateAlgebra,
     translateQuery,
+    # pprintAlgebra
 )
 from rdflib.plugins.sparql.parser import parseQuery
-from rdflib.plugins.sparql.parserutils import CompValue
+
+# from rdflib.plugins.sparql.parserutils import CompValue
 
 from tqdm.asyncio import tqdm_asyncio
 from tqdm.asyncio import tqdm
@@ -36,7 +38,7 @@ class SparqlAnalysis:
         self.df_pkl_filename = f"{self.data_folder}/bio2rdf-sparql-log.df.pkl"
         self.df_agg_pkl_filename = f"{self.data_folder}/bio2rdf-sparql-log-agg.df.pkl"
         self.df_results_pkl_filename = (
-            f"{self.data_folder}/bio2rdf-sparql-log-results.df.pkl"
+            f"{self.data_folder}/bio2rdf-sparql-log-results-5000.df.pkl"
         )
 
     def downloadRemoteFile(self, remote_file_path, local_folder, local_file_name):
@@ -126,61 +128,24 @@ class SparqlAnalysis:
 
         return True
 
-    def pAlgebra(q) -> None:
-        def pp(p, ind="    "):
-            if not isinstance(p, CompValue):
-                print(p)
-                return
-            print("%s(" % (p.name,))
-            for k in p:
-                print(
-                    "%s%s ="
-                    % (
-                        ind,
-                        k,
-                    ),
-                    end=" ",
-                )
-                pp(p[k], ind + "    ")
-            print("%s)" % ind)
-
-        try:
-            pp(q.algebra)
-        except AttributeError:
-            # it's update, just a list
-            for x in q:
-                pp(x)
-
     async def parseSPARQLquery(self, query):
         try:
-            stdout = sys.stdout
-            sys.stdout = open(os.devnull, "w")
+            # silence the print statements. issue raised on github
+            # temp_stdout = open(os.devnull, "w")
+            # stdout = sys.stdout
 
             parsed = parseQuery(query)
             algebra = translateQuery(parsed)
+
             # pprintAlgebra(algebra)
             translated = translateAlgebra(algebra)
 
-            sys.stdout = stdout
-            return query, algebra, translated
+            # sys.stdout = stdout
+
+            # return query, algebra, translated
+            return query, "", translated
         except Exception:
             return query, "", ""
-
-    async def parseSPARQLquery2(self, query, asyncio_semaphore):
-        async with asyncio_semaphore:
-            try:
-                stdout = sys.stdout
-                sys.stdout = open(os.devnull, "w")
-
-                parsed = parseQuery(query)
-                algebra = translateQuery(parsed)
-                # pprintAlgebra(algebra)
-                translated = translateAlgebra(algebra)
-
-                sys.stdout = stdout
-                return query, algebra, translated
-            except Exception:
-                return query, "", ""
 
     async def process_all_queries(self):
         if self.df_agg is None:
@@ -188,43 +153,13 @@ class SparqlAnalysis:
                 self.df_agg = pd.read_pickle(self.df_agg_pkl_filename)
 
         df = self.df_agg
-        # df = self.df_agg[:2000].copy()
-        # stdout = sys.stdout
-        # sys.stdout = open(os.devnull, 'w')
+        # df = self.df_agg[:5000].copy() # for testing
 
         queries = df["query"].values.tolist()
 
         tasks = [self.parseSPARQLquery(query) for query in queries]
         results = await tqdm_asyncio.gather(*tasks)
-
-        # asyncio_semaphore = asyncio.BoundedSemaphore(100)
-        # tasks = []
-        # for query in queries:
-        #     #task = asyncio.create_task(self.parseSPARQLquery(query))
-        #     task = asyncio.ensure_future(self.parseSPARQLquery2(query, asyncio_semaphore))
-        #     tasks.append(task)
-
-        # results = [
-        #     await f
-        #     async for f in tqdm(asyncio.as_completed(tasks), total=len(tasks))
-        # ]
-
-        # for task in tqdm_asyncio.as_completed(tasks):
-        #     # get the next result
-        #     result = await task
-        #     #print(f'>got {result}')
-
-        # pbar = tqdm(total=len(tasks))
-        # results = []
-        # for f in asyncio.as_completed(tasks):
-        #     result = await f
-        #     results.append(result)
-        #     #pbar.set_description(value)
-        #     pbar.set_description("parsing", refresh=True)
-        #     # lquery.append(value[0])
-        #     # lalgebra.append(value[1])
-        #     # ltranslated.append(value[2])
-        #     pbar.update()
+        # @todo progress bar does not correctly work
 
         df = pd.DataFrame(results, columns=["query", "algebra", "translated"])
         df.to_pickle(self.df_results_pkl_filename)
@@ -234,6 +169,7 @@ class SparqlAnalysis:
 
 if __name__ == "__main__":
     project = "sparql-logs"
+    load_dotenv()
 
     startTime = time.time()
     argParser = argparse.ArgumentParser(
@@ -249,6 +185,9 @@ if __name__ == "__main__":
     s.getBio2RDFLogs()
     s.aggregateQueries()
     asyncio.run(s.process_all_queries())
+
+    # filename = f"/data/sparql-logs/bio2rdf-sparql-log-results-5000.df.pkl"
+    # df = pd.read_pickle(filename)
 
     executionTime = time.time() - startTime
     print(f"Execution time: {executionTime} seconds")

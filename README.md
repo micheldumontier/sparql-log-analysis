@@ -15,6 +15,7 @@ Install dependencies
 pip install -e .
 ```
 
+
 With hatch
 ```bash
 hatch run python src/analyze_sparql_logs.py

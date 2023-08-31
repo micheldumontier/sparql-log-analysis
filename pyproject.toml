@@ -23,7 +23,8 @@ dependencies = [
     "rdflib",
     "argparse",
     "swifter",
-    "rdflib"
+    "rdflib",
+    "python-dotenv"
 ]
 
 [tool.ruff]

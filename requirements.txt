@@ -7,3 +7,4 @@ pandas
 rdflib
 argparse
 swifter
+python-dotenv
