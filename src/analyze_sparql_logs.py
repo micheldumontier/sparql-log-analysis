@@ -171,7 +171,7 @@ if __name__ == "__main__":
     project = "sparql-logs"
     load_dotenv()
 
-    startTime = time.time()
+    s = time.perf_counter()
     argParser = argparse.ArgumentParser(
         prog="SPARQL Log Analysis Tool",
         description="For the analysis of SPARQL logs",
@@ -189,5 +189,5 @@ if __name__ == "__main__":
     # filename = f"/data/sparql-logs/bio2rdf-sparql-log-results-5000.df.pkl"
     # df = pd.read_pickle(filename)
 
-    executionTime = time.time() - startTime
-    print(f"Execution time: {executionTime} seconds")
+    elapsed = time.perf_counter() - s
+    print(f"{__file__} executed in {elapsed:0.2f} seconds.")
